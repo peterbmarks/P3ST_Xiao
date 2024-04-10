@@ -2,7 +2,11 @@
 
 This version is currently under development by Peter Marks, VK3TPM and is stored [here](https://github.com/peterbmarks/P3ST_Xiao). 
 
-The original is from Todd and can be found [here](https://github.com/mostlydiyrf/p3st).
+The original is from Todd Carney and can be found [here](https://github.com/mostlydiyrf/p3st).
+
+The kit is available from [Mostly DIY RF](https://mostlydiyrf.com/p3st/).
+
+Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/messages).
 
 The firmware included with the P3ST kit (as loaded on the **Xiao RP2040**) was written in C/C++ for use with the Arduino IDE and with the **Raspberry Pi RP2040 Boards (3.1.0)** "package" installed through the Boards Manager (Menu: **Tools/Board/Board Manager**). 
 
