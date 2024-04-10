@@ -8,13 +8,18 @@ The kit is available from [Mostly DIY RF](https://mostlydiyrf.com/p3st/).
 
 Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/messages).
 
+## Changes by Peter
+
+* Print debugging to Serial
+* Better method for deciding to initialise non volatile stored values
+* Use constants rather than values in the code
+* Minor formatting changes to my taste
+
 The firmware included with the P3ST kit (as loaded on the **Xiao RP2040**) was written in C/C++ for use with the Arduino IDE and with the **Raspberry Pi RP2040 Boards (3.1.0)** "package" installed through the Boards Manager (Menu: **Tools/Board/Board Manager**). 
 
 The libraries for use with the program (a.k.a., "sketch") are available using the **Tools/Manage Libraries** utility in the IDE except for the **MultiButton** and **xiaoRP2040pinNums** libraries included in this repository. Download and install those manually (see <https://learn.adafruit.com/adafruit-all-about-arduino-libraries-install-use/how-to-install-a-library>).
 
 The Xiao can also be programmed in MicroPython or CircuitPython. More information on doing so can be found at <https://wiki.seeedstudio.com/XIAO-RP2040-with-MicroPython/>. MDRF is not able to provide any support regarding the use of python with the Xiao.
-
-
 
 ## Firmware Version 2
 A number of bug fixes and improvements have been incorporated in V.2. You are strongly urged to download and install it if you haven't already edited P3ST_Xiao to your liking. You will need to use the Arduino IDE (provisioned as indicated above) to do so.
