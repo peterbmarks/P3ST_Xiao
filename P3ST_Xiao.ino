@@ -35,6 +35,7 @@ const int kCalFactorAddress = 20;
 const int kDisplayOffsetAddress = 5;
 const int kLastUsedBFOAddress = 0;
 #define kLCDI2cAddress 0x27
+// Si5351 i2c address is 0x60
 
 //========================================
 //======== GLOBAL DECLARATIONS ===========
