@@ -15,6 +15,12 @@ Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/mess
 * Use constants rather than values in the code
 * Minor formatting changes to my taste
 
+## Notes
+
+* Set board to Raspberry Pi Pico -> Seeed XIAO RP2040
+* Plug the board in to USB while holding the boot button
+* Choose "UF2 Port" for the serial port
+
 ## Original Readme below
 
 The firmware included with the P3ST kit (as loaded on the **Xiao RP2040**) was written in C/C++ for use with the Arduino IDE and with the **Raspberry Pi RP2040 Boards (3.1.0)** "package" installed through the Boards Manager (Menu: **Tools/Board/Board Manager**). 

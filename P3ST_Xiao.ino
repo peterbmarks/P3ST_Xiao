@@ -27,12 +27,14 @@
 #include <si5351.h>               // Author: Jason NT7S. V.2.1.4.
 #include <Adafruit_NeoPixel.h>    // Used to confirm program upload. Can be removed.
 
-// Constants
+//========================================
+//======== CONSTANTS ===========
+//======================================== 
 // EEPROM addresses for settings
 const int kCalFactorAddress = 20;
 const int kDisplayOffsetAddress = 5;
 const int kLastUsedBFOAddress = 0;
-const char kLCDI2cAddress = 0x27;
+#define kLCDI2cAddress 0x27
 
 //========================================
 //======== GLOBAL DECLARATIONS ===========
@@ -393,7 +395,7 @@ void si5351CorrectionFactor() {
 ////******** FUNCTION: setup ***************
 ////========================================
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   uint32_t displayOffsetTest;
   uint32_t bfoTest;
