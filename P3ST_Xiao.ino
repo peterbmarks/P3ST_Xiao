@@ -61,47 +61,6 @@ LiquidCrystal_I2C lcd(kLCDI2cAddress, 16, 2);
 Rotary tuningEncoder = Rotary(D0, D1);
 PinButton button(encoderButton);
 
-////===================================== 
-////******* FUNCTION: saveInt ********
-////=====================================
-void saveInt(int address, int number) {
- 
-  EEPROM.write(address, number >> 8);
-  EEPROM.write(address + 1, number & 0xFF);
-}
-
-//////===================================== 
-//////******* FUNCTION: readInt ********
-//////=====================================
-int readInt(int address) {
-
-  byte byte1 = EEPROM.read(address);
-  byte byte2 = EEPROM.read(address + 1);
-  return (byte1 << 8) + byte2;
-}
-
-////===================================== 
-////******* FUNCTION: saveUint32 ********
-////=====================================
-void saveUint32(int address, uint32_t number) {
-
-  EEPROM.write(address, (number >> 24) & 0xFF);      // These lines encode the 32-bit variable into
-  EEPROM.write(address + 1, (number >> 16) & 0xFF);  // 4 bytes (8-bits each) and writes them to
-  EEPROM.write(address + 2, (number >> 8) & 0xFF);   // consecutive eeprom bytes starting with the
-  EEPROM.write(address + 3, number & 0xFF);          // address byte. Using write() instead of update()
-  EEPROM.commit();
-}                                                    // to save time and because update() won't help
-                                                     // save write cycles for *each* byte of the 4-byte blocks.
-////===================================
-//// ***** FUNCTION: readUint32 *******
-///===================================
-uint32_t readUint32(int address) {
-
-  return ((uint32_t)EEPROM.read(address) << 24) +      // These lines decode 4 consecutive eeprom bytes (8-
-         ((uint32_t)EEPROM.read(address + 1) << 16) +  // bits each) into a 32-bit variable (starting with the
-         ((uint32_t)EEPROM.read(address + 2) << 8) +   // address byte) and returns to the calling statement.
-         (uint32_t)EEPROM.read(address + 3);           // Example: uint32_t myNumber = readUint32(0);
-}
 
 ////========================================
 ////***** FUNCTION: lcdClearLine ***********
@@ -404,6 +363,9 @@ void setup() {
   lcd.init();
   lcd.backlight();
   Wire.begin();
+
+  i2cScan();
+
   EEPROM.begin(256);
   si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
@@ -513,4 +475,85 @@ NOP;    // C/C++ rules say a label must be followed by something. This "somethin
 
 }  // closes main loop() 
 
-   
+////===================================== 
+////******* FUNCTION: saveInt ********
+////=====================================
+void saveInt(int address, int number) {
+ 
+  EEPROM.write(address, number >> 8);
+  EEPROM.write(address + 1, number & 0xFF);
+}
+
+//////===================================== 
+//////******* FUNCTION: readInt ********
+//////=====================================
+int readInt(int address) {
+
+  byte byte1 = EEPROM.read(address);
+  byte byte2 = EEPROM.read(address + 1);
+  return (byte1 << 8) + byte2;
+}
+
+////===================================== 
+////******* FUNCTION: saveUint32 ********
+////=====================================
+void saveUint32(int address, uint32_t number) {
+
+  EEPROM.write(address, (number >> 24) & 0xFF);      // These lines encode the 32-bit variable into
+  EEPROM.write(address + 1, (number >> 16) & 0xFF);  // 4 bytes (8-bits each) and writes them to
+  EEPROM.write(address + 2, (number >> 8) & 0xFF);   // consecutive eeprom bytes starting with the
+  EEPROM.write(address + 3, number & 0xFF);          // address byte. Using write() instead of update()
+  EEPROM.commit();
+}                                                    // to save time and because update() won't help
+                                                     // save write cycles for *each* byte of the 4-byte blocks.
+////===================================
+//// ***** FUNCTION: readUint32 *******
+///===================================
+uint32_t readUint32(int address) {
+
+  return ((uint32_t)EEPROM.read(address) << 24) +      // These lines decode 4 consecutive eeprom bytes (8-
+         ((uint32_t)EEPROM.read(address + 1) << 16) +  // bits each) into a 32-bit variable (starting with the
+         ((uint32_t)EEPROM.read(address + 2) << 8) +   // address byte) and returns to the calling statement.
+         (uint32_t)EEPROM.read(address + 3);           // Example: uint32_t myNumber = readUint32(0);
+}
+
+// Scan the i2c bus
+// From: https://playground.arduino.cc/Main/I2cScanner/
+void i2cScan() {
+  byte error, address;
+  int nDevices;
+ 
+  Serial.println("Scanning...");
+ 
+  nDevices = 0;
+  for(address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+ 
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.print(address,HEX);
+      Serial.println("  !");
+ 
+      nDevices++;
+    }
+    else if (error==4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("i2c scan done\n");
+}
