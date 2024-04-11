@@ -23,30 +23,32 @@ Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/mess
 
 ## Serial debug message example
 
-Scanning...
-I2C device found at address 0x27  !
-I2C device found at address 0x60  !
-i2c scan done
+### First run
+    P3ST starting up...
+    Scanning...
+    I2C device found at address 0x27  !
+    I2C device found at address 0x60  !
+    i2c scan done
 
-Read magic number = 4294967295
-##### Initializing EEPROM stored values
-Initializing gCalibrationFactor = 170100
-Initializing gDisplayOffset = 4915000
-Initializing gLastUsedBFO = 4917500
-set BFO freq CLK2: 491750000
-set VFO freq CLK0: 908500000
+    Read magic number = 4294967295
+    ##### Initializing EEPROM stored values
+    Initializing gCalibrationFactor = 170100
+    Initializing gDisplayOffset = 4915000
+    Initializing gLastUsedBFO = 4917500
+    set BFO freq CLK2: 491750000
+    set VFO freq CLK0: 908500000
 
-### Next run
+### Subsequent run
 
-P3ST starting up...
-Scanning...
-I2C device found at address 0x27  !
-I2C device found at address 0x60  !
-i2c scan done
+    P3ST starting up...
+    Scanning...
+    I2C device found at address 0x27  !
+    I2C device found at address 0x60  !
+    i2c scan done
 
-Read magic number = 1234
-set BFO freq CLK2: 491750000
-set VFO freq CLK0: 908500000
+    Read magic number = 1234
+    set BFO freq CLK2: 491750000
+    set VFO freq CLK0: 908500000
 
 ## Original Readme below
 
