@@ -2,6 +2,7 @@
 // (C) T.F. Carney (K7TFC). For use under the terms of the
 // Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.
 // See https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
+// This version modified by Peter Marks VK3TPM
 
 #include "xiaoRP2040pinNums.h"  // Keep this library above the #defines.
 
@@ -11,6 +12,7 @@
 #define encoderButton D2
 #define encoderA D0
 #define encoderB D1
+#define kLCDI2cAddress 0x27
 
 //========================================
 //=============  LIBRARIES ===============
@@ -30,11 +32,12 @@
 //======== CONSTANTS ===========
 //======================================== 
 // EEPROM addresses for settings
-const int kCalFactorAddress = 20;
-const int kDisplayOffsetAddress = 5;
-const int kLastUsedBFOAddress = 0;
-#define kLCDI2cAddress 0x27
+const int kInitedMagicAddress = 0;  // look for a magic number to determine if EEPROM values have been initialized
+const int kCalFactorAddress = 5;
+const int kDisplayOffsetAddress = 10;
+const int kLastUsedBFOAddress = 15;
 // Si5351 i2c address is 0x60
+const int kInitedMagicNumber = 1234; // magic number to look for to determine if initial values have been stored
 
 //========================================
 //======== GLOBAL DECLARATIONS ===========
@@ -52,7 +55,6 @@ int step = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGU
 int Power = 11;
 int PIN  = 12;
 
-
 //========================================
 //============ INSTANTIATIONS ============
 //========================================
@@ -62,6 +64,125 @@ Rotary tuningEncoder = Rotary(D0, D1);
 PinButton button(encoderButton);
 
 
+////========================================
+////******** FUNCTION: setup ***************
+////========================================
+void setup() {
+  Serial.begin(115200);
+
+  lcd.init();
+  lcd.backlight();
+  Wire.begin();
+
+  i2cScan();
+
+  EEPROM.begin(256);
+  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
+  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
+  //////////////////////////////////////
+  setupInitialValues(); // read from EEPROM or set initial values if not already stored
+
+  displayFreqLine(0,lastUsedVFO + displayOffset);  //Parameters: LCD line (0 or 1), frequency value.
+  displayTuningStep(step, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
+  lcd.setCursor(0, 1);
+  lcd.print("P3ST");
+} // End of setup()
+
+//========================================
+//********* FUNCTION: (main)loop *********
+//========================================
+void loop() {
+
+  unsigned char encoder;
+  int counter = 0;
+
+  // Read tuning encoder and set Si5351 accordingly
+  /////////////////////////////////////////////////
+  button.update();
+  encoder = tuningEncoder.process();  
+
+// Button activity on tuning encoder          
+   if (button.isLongClick()) {                           
+    bfoFreq();                // Long press-and-release will call BFO-setting function.
+   }
+   else if(button.isDoubleClick()) {
+    si5351CorrectionFactor();
+   }
+   else if(button.isSingleClick() && step == steps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
+    step = steps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
+    displayTuningStep(step, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
+   }
+   else if (button.isSingleClick() && step == steps[0]) {
+    step = steps[1];
+    displayTuningStep(step, 1);
+    }
+   else if (button.isSingleClick() && step == steps[1]) {
+    step = steps[2];
+    displayTuningStep(step, 1);
+    }
+   else if (button.isSingleClick() && step == steps[2]) {
+    step = steps[3];
+    displayTuningStep(step, 1);
+   }
+
+   uint32_t vfoValue = lastUsedVFO;
+
+// Skip to end of loop() unless there's change on either encoder or button
+  // so LCD and Si5351 aren't constantly updating (and generating RFI).
+  if (!encoder && !button.isClick()) {
+    goto skip;
+  }
+  else if (encoder == DIR_CCW) {
+    counter++;
+  }
+  else if (encoder == DIR_CW) {
+    counter--;
+  }
+    vfoValue += (counter * step);
+    Serial.print("set VFO freq CLK0: ");
+    Serial.println(vfoValue * 100);
+    si5351.set_freq(vfoValue * 100, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
+    lastUsedVFO = vfoValue;
+
+  // LCD display ///////////////////
+  displayFreqLine(0,lastUsedVFO + displayOffset);
+  //displayTuningStep(step, 1);
+ 
+skip:   // This label is where the loop goes if there are no inputs.
+NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
+
+}  // closes main loop() 
+
+void setupInitialValues() {
+  uint32_t initedMagicNumberValue = readUint32(kInitedMagicAddress);
+  Serial.print("Read magic number = ");
+  Serial.println(initedMagicNumberValue);
+  if(initedMagicNumberValue != kInitedMagicNumber) {
+    Serial.println("##### Initializing EEPROM stored values");
+    Serial.print("Initializing calFactor = ");
+    Serial.println(calFactor + 10000);
+    saveUint32(kCalFactorAddress, calFactor + 10000);  // 10000 padding added to prevent underflow for negative cal factors.
+
+    Serial.print("Initializing displayOffset = ");
+    Serial.println(displayOffset);
+    saveUint32(kDisplayOffsetAddress, displayOffset);       // Saves default value in eeprom.
+
+    Serial.print("Initializing lastUsedBFO = ");
+    Serial.println(lastUsedBFO);
+    saveUint32(kLastUsedBFOAddress, lastUsedBFO);    // Saves default value in eeprom.
+  }
+  // Read stored values from EEPROM
+  calFactor = readUint32(kCalFactorAddress);
+  si5351.set_correction(((calFactor - 10000) * 100), SI5351_PLL_INPUT_XO); 
+  lastUsedBFO = readUint32(kLastUsedBFOAddress);
+  Serial.print("set BFO freq CLK2: ");
+  Serial.println(lastUsedBFO * 100);
+  si5351.set_freq(lastUsedBFO * 100, SI5351_CLK2);
+
+  Serial.print("set VFO freq CLK0: ");
+  Serial.println(lastUsedVFO * 100);
+  si5351.set_freq(lastUsedVFO * 100, SI5351_CLK0);
+}
 ////========================================
 ////***** FUNCTION: lcdClearLine ***********
 ////========================================
@@ -350,130 +471,6 @@ void si5351CorrectionFactor() {
   return;
 }
 
-////========================================
-////******** FUNCTION: setup ***************
-////========================================
-void setup() {
-  Serial.begin(115200);
-
-  uint32_t displayOffsetTest;
-  uint32_t bfoTest;
-  uint32_t calFactorTest;
-  
-  lcd.init();
-  lcd.backlight();
-  Wire.begin();
-
-  i2cScan();
-
-  EEPROM.begin(256);
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
-  //////////////////////////////////////
- 
-  calFactorTest = readUint32(kCalFactorAddress);
-  Serial.print("calFactorTest = ");
-  Serial.println(calFactorTest);
-
-  if (calFactorTest == 0) {
-    Serial.print("Initializing calFactor = ");
-    Serial.println(calFactor + 10000);
-    saveUint32(kCalFactorAddress, calFactor + 10000);  // 10000 padding added to prevent underflow for negative cal factors.
-  }
-  si5351.set_correction(((calFactor - 10000) * 100), SI5351_PLL_INPUT_XO); 
-  /////////////////////////////////////
-  displayOffsetTest = readUint32(kDisplayOffsetAddress);
-  Serial.print("displayOffsetTest = ");
-  Serial.println(displayOffsetTest);
-  if (displayOffsetTest == 0) {         // Tests for first-time use (no offset saved in eeprom).
-    Serial.print("Initializing displayOffset = ");
-    Serial.println(displayOffset);
-    saveUint32(kDisplayOffsetAddress, displayOffset);       // Saves default value in eeprom.
-  }
-  ///////////////////////////////////
-  bfoTest = readUint32(kLastUsedBFOAddress);
-  Serial.print("bfoTest = ");
-  Serial.println(bfoTest);
-  if (bfoTest == 0) {              // Tests for first-time use (no BFO saved in eeprom).
-    saveUint32(kLastUsedBFOAddress, lastUsedBFO);    // Saves default value in eeprom.
-  }
-  lastUsedBFO = readUint32(kLastUsedBFOAddress);
-  Serial.print("set BFO freq CLK2: ");
-  Serial.println(lastUsedBFO * 100);
-  si5351.set_freq(lastUsedBFO * 100, SI5351_CLK2);
-  Serial.print("set VFO freq CLK0: ");
-  Serial.println(lastUsedVFO * 100);
-  si5351.set_freq(lastUsedVFO * 100, SI5351_CLK0);
-  displayFreqLine(0,lastUsedVFO + displayOffset);  //Parameters: LCD line (0 or 1), frequency value.
-  displayTuningStep(step, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
-  lcd.setCursor(0, 1);
-  lcd.print("P3ST");
-} // End of setup()
-
-//========================================
-//********* FUNCTION: (main)loop *********
-//========================================
-void loop() {
-
-  unsigned char encoder;
-  int counter = 0;
-
-  // Read tuning encoder and set Si5351 accordingly
-  /////////////////////////////////////////////////
-  button.update();
-  encoder = tuningEncoder.process();  
-
-// Button activity on tuning encoder          
-   if (button.isLongClick()) {                           
-    bfoFreq();                // Long press-and-release will call BFO-setting function.
-   }
-   else if(button.isDoubleClick()) {
-    si5351CorrectionFactor();
-   }
-   else if(button.isSingleClick() && step == steps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
-    step = steps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
-    displayTuningStep(step, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
-   }
-   else if (button.isSingleClick() && step == steps[0]) {
-    step = steps[1];
-    displayTuningStep(step, 1);
-    }
-   else if (button.isSingleClick() && step == steps[1]) {
-    step = steps[2];
-    displayTuningStep(step, 1);
-    }
-   else if (button.isSingleClick() && step == steps[2]) {
-    step = steps[3];
-    displayTuningStep(step, 1);
-   }
-
-   uint32_t vfoValue = lastUsedVFO;
-
-// Skip to end of loop() unless there's change on either encoder or button
-  // so LCD and Si5351 aren't constantly updating (and generating RFI).
-  if (!encoder && !button.isClick()) {
-    goto skip;
-  }
-  else if (encoder == DIR_CCW) {
-    counter++;
-  }
-  else if (encoder == DIR_CW) {
-    counter--;
-  }
-    vfoValue += (counter * step);
-    Serial.print("set VFO freq CLK0: ");
-    Serial.println(vfoValue * 100);
-    si5351.set_freq(vfoValue * 100, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
-    lastUsedVFO = vfoValue;
-
-  // LCD display ///////////////////
-  displayFreqLine(0,lastUsedVFO + displayOffset);
-  //displayTuningStep(step, 1);
- 
-skip:   // This label is where the loop goes if there are no inputs.
-NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
-
-}  // closes main loop() 
 
 ////===================================== 
 ////******* FUNCTION: saveInt ********
