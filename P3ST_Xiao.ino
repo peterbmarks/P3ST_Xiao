@@ -42,14 +42,14 @@ const int kInitedMagicNumber = 1234; // magic number to look for to determine if
 //========================================
 //======== GLOBAL DECLARATIONS ===========
 //======================================== 
-uint32_t calFactor = 160100;       //////*** DEFAULT VALUE. CHANGE FOR A DIFFERENT CALIBRATION FACTOR AS FOUND FROM
+uint32_t gCalibrationFactor = 160100;       //////*** DEFAULT VALUE. CHANGE FOR A DIFFERENT CALIBRATION FACTOR AS FOUND FROM
                                    //////*** THE ETHERKIT Si5351_calibration.ino SKETCH AS FOUND IN THE
                                    //////*** ARDUINO IDE: File/Examples/Etherkit Si5351. *OR* USE 
                                    
-uint32_t lastUsedVFO = 9085000;
-uint32_t displayOffset = 4915000;    
+uint32_t gLastUsedVFO = 9085000;
+uint32_t gDisplayOffset = 4915000;    
 
-uint32_t lastUsedBFO = 4917500;    // Starting value. Later read from "EEPROM"
+uint32_t gLastUsedBFO = 4917500;    // Starting value. Later read from "EEPROM"
 int steps[] = {10,100,1000,10000}; // Tuning steps to increment frequency (in Hz) each encoder detent.
 int step = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGULAR *SIGNED* INTEGER!
 int Power = 11;
@@ -82,7 +82,7 @@ void setup() {
   //////////////////////////////////////
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
-  displayFreqLine(0,lastUsedVFO + displayOffset);  //Parameters: LCD line (0 or 1), frequency value.
+  displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
   displayTuningStep(step, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
   lcd.setCursor(0, 1);
   lcd.print("P3ST");
@@ -125,7 +125,7 @@ void loop() {
     displayTuningStep(step, 1);
    }
 
-   uint32_t vfoValue = lastUsedVFO;
+   uint32_t vfoValue = gLastUsedVFO;
 
 // Skip to end of loop() unless there's change on either encoder or button
   // so LCD and Si5351 aren't constantly updating (and generating RFI).
@@ -142,10 +142,10 @@ void loop() {
     Serial.print("set VFO freq CLK0: ");
     Serial.println(vfoValue * 100);
     si5351.set_freq(vfoValue * 100, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
-    lastUsedVFO = vfoValue;
+    gLastUsedVFO = vfoValue;
 
   // LCD display ///////////////////
-  displayFreqLine(0,lastUsedVFO + displayOffset);
+  displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
   //displayTuningStep(step, 1);
  
 skip:   // This label is where the loop goes if there are no inputs.
@@ -159,29 +159,29 @@ void setupInitialValues() {
   Serial.println(initedMagicNumberValue);
   if(initedMagicNumberValue != kInitedMagicNumber) {
     Serial.println("##### Initializing EEPROM stored values");
-    Serial.print("Initializing calFactor = ");
-    Serial.println(calFactor + 10000);
-    saveUint32(kCalFactorAddress, calFactor + 10000);  // 10000 padding added to prevent underflow for negative cal factors.
+    Serial.print("Initializing gCalibrationFactor = ");
+    Serial.println(gCalibrationFactor + 10000);
+    saveUint32(kCalFactorAddress, gCalibrationFactor + 10000);  // 10000 padding added to prevent underflow for negative cal factors.
 
-    Serial.print("Initializing displayOffset = ");
-    Serial.println(displayOffset);
-    saveUint32(kDisplayOffsetAddress, displayOffset);       // Saves default value in eeprom.
+    Serial.print("Initializing gDisplayOffset = ");
+    Serial.println(gDisplayOffset);
+    saveUint32(kDisplayOffsetAddress, gDisplayOffset);       // Saves default value in eeprom.
 
-    Serial.print("Initializing lastUsedBFO = ");
-    Serial.println(lastUsedBFO);
-    saveUint32(kLastUsedBFOAddress, lastUsedBFO);    // Saves default value in eeprom.
+    Serial.print("Initializing gLastUsedBFO = ");
+    Serial.println(gLastUsedBFO);
+    saveUint32(kLastUsedBFOAddress, gLastUsedBFO);    // Saves default value in eeprom.
   }
   // Read stored values from EEPROM
-  calFactor = readUint32(kCalFactorAddress);
-  si5351.set_correction(((calFactor - 10000) * 100), SI5351_PLL_INPUT_XO); 
-  lastUsedBFO = readUint32(kLastUsedBFOAddress);
+  gCalibrationFactor = readUint32(kCalFactorAddress);
+  si5351.set_correction(((gCalibrationFactor - 10000) * 100), SI5351_PLL_INPUT_XO); 
+  gLastUsedBFO = readUint32(kLastUsedBFOAddress);
   Serial.print("set BFO freq CLK2: ");
-  Serial.println(lastUsedBFO * 100);
-  si5351.set_freq(lastUsedBFO * 100, SI5351_CLK2);
+  Serial.println(gLastUsedBFO * 100);
+  si5351.set_freq(gLastUsedBFO * 100, SI5351_CLK2);
 
   Serial.print("set VFO freq CLK0: ");
-  Serial.println(lastUsedVFO * 100);
-  si5351.set_freq(lastUsedVFO * 100, SI5351_CLK0);
+  Serial.println(gLastUsedVFO * 100);
+  si5351.set_freq(gLastUsedVFO * 100, SI5351_CLK0);
 }
 ////========================================
 ////***** FUNCTION: lcdClearLine ***********
@@ -317,8 +317,8 @@ void setDisplayOffset() {
     }
   }
 
-  displayOffset = offsetValue;
-  saveUint32(kDisplayOffsetAddress, displayOffset);
+  gDisplayOffset = offsetValue;
+  saveUint32(kDisplayOffsetAddress, gDisplayOffset);
   
   // reset BFO display
     lcdClearLine(0);
@@ -327,7 +327,7 @@ void setDisplayOffset() {
     lcd.setCursor(0, 1);
     lcd.print("BFO:");
     lcd.setCursor(7, 1);
-    displayFreqLine(1, lastUsedBFO);  
+    displayFreqLine(1, gLastUsedBFO);  
 
     return;
 }
@@ -340,7 +340,7 @@ void bfoFreq() {
     button.update();
 
     int bfoStep = steps[0];
-    uint32_t bfoValue = lastUsedBFO;
+    uint32_t bfoValue = gLastUsedBFO;
     int counter;
 
     lcdClearLine(0);
@@ -377,11 +377,11 @@ void bfoFreq() {
     }
     else {
       bfoValue += (counter * bfoStep);
-      lastUsedBFO = bfoValue;
+      gLastUsedBFO = bfoValue;
     }
     Serial.print("set BFO freq CLK2: ");
-    Serial.println(lastUsedBFO * 100);
-   si5351.set_freq(lastUsedBFO * 100, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
+    Serial.println(gLastUsedBFO * 100);
+   si5351.set_freq(gLastUsedBFO * 100, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
    lcd.setCursor(7, 1);
    displayFreqLine(1,bfoValue);  //Parameters: LCD line (0 or 1), frequency value.
 
@@ -392,13 +392,13 @@ void bfoFreq() {
   // At this point (after long press-and-hold of encoder button),
   // save new BFO freq to "EEPROM" and restore the VFO display before returning.
 
-  lastUsedBFO = bfoValue;
-  saveUint32(kLastUsedBFOAddress, lastUsedBFO);  
+  gLastUsedBFO = bfoValue;
+  saveUint32(kLastUsedBFOAddress, gLastUsedBFO);  
 
   lcdClearLine(0);
   lcdClearLine(1);
   lcd.setCursor(0,1);
-  displayFreqLine(0,lastUsedVFO + displayOffset);  
+  displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  
   displayTuningStep(step, 1);
   lcd.setCursor(0, 1);
   lcd.print("P3ST");
@@ -413,7 +413,7 @@ void si5351CorrectionFactor() {
 
   int correctionStep = steps[0];
   int counter;
-  float currentVFOnum = float(lastUsedVFO);
+  float currentVFOnum = float(gLastUsedVFO);
   uint32_t correctionFactor = 0;
   float correctionFactorRaw = 0;
   float correctionFactorFloat;
@@ -423,7 +423,7 @@ void si5351CorrectionFactor() {
   lcdClearLine(0);
   lcd.print("Set known Freq:");
   lcdClearLine(1);
-  displayFreqLine(1, currentVFOnum + displayOffset);    
+  displayFreqLine(1, currentVFOnum + gDisplayOffset);    
   
   button.update();
   while (!button.isDoubleClick()) {
@@ -447,23 +447,23 @@ void si5351CorrectionFactor() {
     }
 
    lcd.setCursor(0, 1);
-   displayFreqLine(1,currentVFOnum + displayOffset);  
+   displayFreqLine(1,currentVFOnum + gDisplayOffset);  
     
     //button.update();
   } // end while loop
 
 
-  correctionFactorRaw = ((float(lastUsedVFO) - currentVFOnum) * -1);
+  correctionFactorRaw = ((float(gLastUsedVFO) - currentVFOnum) * -1);
   correctionFactorFloat = correctionFactorRaw / currentVFOnum;
   correctionFactor = int(correctionFactorFloat * 10000000);   // Multiplies up toward parts-per-billion
 
   si5351.set_correction(correctionFactor * 100, SI5351_PLL_INPUT_XO);   // x100 to parts-per-billion
-  lastUsedVFO = currentVFOnum;
+  gLastUsedVFO = currentVFOnum;
   saveUint32(kCalFactorAddress, correctionFactor + 10000);  // Pad correctionFactor with 10000 to prevent integer underflow
                                           // of negative values.
   //Now fully restore normal VFO display
   lcdClearLine(0);
-  displayFreqLine(0,lastUsedVFO + displayOffset);
+  displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
   lcd.setCursor(13,0); lcd.print("USB");
   lcd.setCursor(0, 1); lcd.print(sp10); lcd.setCursor(0, 1); lcd.print("P3ST");
   displayTuningStep(step, 1);
