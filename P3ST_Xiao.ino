@@ -21,11 +21,10 @@
                                   // Do not confuse with libraries of the same name for other architectures.  
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>    // Author: Schwartz.
-#include <Rotary.h>               // Author: Ben Buxton.
+#include <Rotary.h>               // Author: Ben Buxton. From https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
 #include "PinButton.h"            // Author: Martin Poelstra (part of MultiButton library with 
                                   // long press modified by K7TFC to 1000ms).
 #include <si5351.h>               // Author: Jason NT7S. V.2.1.4.
-#include <Adafruit_NeoPixel.h>    // Used to confirm program upload. Can be removed.
 
 //========================================
 //======== CONSTANTS ===========
