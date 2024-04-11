@@ -74,18 +74,20 @@ void setup() {
   lcd.backlight();
   Wire.begin();
 
+  Serial.println("P3ST starting up...");
   i2cScan();
 
   EEPROM.begin(256);
   si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
+  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
   //////////////////////////////////////
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
   displayTuningStep(step, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
   lcd.setCursor(0, 1);
-  lcd.print("P3ST");
+  lcd.print("P3ST.");
 } // End of setup()
 
 //========================================
@@ -170,6 +172,9 @@ void setupInitialValues() {
     Serial.print("Initializing gLastUsedBFO = ");
     Serial.println(gLastUsedBFO);
     saveUint32(kLastUsedBFOAddress, gLastUsedBFO);    // Saves default value in eeprom.
+
+    Serial.println("Writing magic number..");
+    saveUint32(kInitedMagicAddress, kInitedMagicNumber);  // write magic number so we know we've inited
   }
   // Read stored values from EEPROM
   gCalibrationFactor = readUint32(kCalFactorAddress);
