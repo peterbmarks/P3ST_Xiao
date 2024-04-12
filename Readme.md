@@ -20,6 +20,7 @@ Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/mess
 * Set board to Raspberry Pi Pico -> Seeed XIAO RP2040
 * Plug the board in to USB while holding the boot button
 * Choose "UF2 Port" for the serial port
+* I've added a built binary. If you plug the board in with the boot button down it will mount as a disk drive. Drag the .uf2 file to it to program.
 
 ## Serial debug message example
 
