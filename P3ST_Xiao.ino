@@ -13,6 +13,7 @@
 #define encoderA D0
 #define encoderB D1
 #define kLCDI2cAddress 0x27
+// Si5351 i2c address is 0x60
 
 //========================================
 //=============  LIBRARIES ===============
@@ -22,8 +23,9 @@
                                   // ~/.arduino15/packages/rp2040/hardware/rp2040/3.1.0/libraries/EEPROM.
                                   // Do not confuse with libraries of the same name for other architectures.  
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>    // Author: Schwartz.
-#include <Rotary.h>               // Author: Ben Buxton. From https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
+#include <LiquidCrystal_I2C.h>    // Author: Schwartz. But credited Frank de Brabander in Arduino Library
+#include <Rotary.h>               // Author: Ben Buxton. From https://github.com/buxtronix/arduino/tree/master/libraries/Rotary 
+                                  // Manually put this in your Arduino/library folder
 #include "PinButton.h"            // Author: Martin Poelstra (part of MultiButton library with 
                                   // long press modified by K7TFC to 1000ms).
 #include <si5351.h>               // Author: Jason NT7S. V.2.1.4.
@@ -36,7 +38,6 @@ const int kInitedMagicAddress = 0;  // look for a magic number to determine if E
 const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
-// Si5351 i2c address is 0x60
 const int kInitedMagicNumber = 1234; // magic number to look for to determine if initial values have been stored
 
 //========================================
@@ -50,10 +51,8 @@ uint32_t gLastUsedVFO = 9085000;
 uint32_t gDisplayOffset = 4915000;    
 
 uint32_t gLastUsedBFO = 4917500;    // Starting value. Later read from "EEPROM"
-int steps[] = {10,100,1000,10000}; // Tuning steps to increment frequency (in Hz) each encoder detent.
-int step = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGULAR *SIGNED* INTEGER!
-int Power = 11;
-int PIN  = 12;
+int kSteps[] = {10,100,1000,10000}; // Tuning kSteps to increment frequency (in Hz) each encoder detent.
+int gStep = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGULAR *SIGNED* INTEGER!
 
 //========================================
 //============ INSTANTIATIONS ============
@@ -62,7 +61,6 @@ Si5351 si5351;
 LiquidCrystal_I2C lcd(kLCDI2cAddress, 16, 2);
 Rotary tuningEncoder = Rotary(D0, D1);
 PinButton button(encoderButton);
-
 
 ////========================================
 ////******** FUNCTION: setup ***************
@@ -85,7 +83,7 @@ void setup() {
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
-  displayTuningStep(step, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
+  displayTuningStep(gStep, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
   lcd.setCursor(0, 1);
   lcd.print("P3ST.");
 } // End of setup()
@@ -110,21 +108,21 @@ void loop() {
    else if(button.isDoubleClick()) {
     si5351CorrectionFactor();
    }
-   else if(button.isSingleClick() && step == steps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
-    step = steps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
-    displayTuningStep(step, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
+   else if(button.isSingleClick() && gStep == kSteps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
+    gStep = kSteps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
+    displayTuningStep(gStep, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
    }
-   else if (button.isSingleClick() && step == steps[0]) {
-    step = steps[1];
-    displayTuningStep(step, 1);
+   else if (button.isSingleClick() && gStep == kSteps[0]) {
+    gStep = kSteps[1];
+    displayTuningStep(gStep, 1);
     }
-   else if (button.isSingleClick() && step == steps[1]) {
-    step = steps[2];
-    displayTuningStep(step, 1);
+   else if (button.isSingleClick() && gStep == kSteps[1]) {
+    gStep = kSteps[2];
+    displayTuningStep(gStep, 1);
     }
-   else if (button.isSingleClick() && step == steps[2]) {
-    step = steps[3];
-    displayTuningStep(step, 1);
+   else if (button.isSingleClick() && gStep == kSteps[2]) {
+    gStep = kSteps[3];
+    displayTuningStep(gStep, 1);
    }
 
    uint32_t vfoValue = gLastUsedVFO;
@@ -140,7 +138,7 @@ void loop() {
   else if (encoder == DIR_CW) {
     counter--;
   }
-    vfoValue += (counter * step);
+    vfoValue += (counter * gStep);
     Serial.print("set VFO freq CLK0: ");
     Serial.println(vfoValue * 100);
     si5351.set_freq(vfoValue * 100, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
@@ -148,7 +146,7 @@ void loop() {
 
   // LCD display ///////////////////
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
-  //displayTuningStep(step, 1);
+  //displayTuningStep(gStep, 1);
  
 skip:   // This label is where the loop goes if there are no inputs.
 NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
@@ -315,7 +313,7 @@ void setDisplayOffset() {
     if (counter == 0) {   //Skip remainder of loop if there's no change in either encoder or button
       continue;
     } else {
-      offsetValue += (counter * steps[0]);
+      offsetValue += (counter * kSteps[0]);
       counter = 0;
       lcd.setCursor(7, 1);
       displayFreqLine(1,offsetValue);
@@ -328,7 +326,7 @@ void setDisplayOffset() {
   // reset BFO display
     lcdClearLine(0);
     lcdClearLine(1);
-    displayTuningStep(steps[0], 0);
+    displayTuningStep(kSteps[0], 0);
     lcd.setCursor(0, 1);
     lcd.print("BFO:");
     lcd.setCursor(7, 1);
@@ -344,7 +342,7 @@ void bfoFreq() {
 
     button.update();
 
-    int bfoStep = steps[0];
+    int bfoStep = kSteps[0];
     uint32_t bfoValue = gLastUsedBFO;
     int counter;
 
@@ -404,7 +402,7 @@ void bfoFreq() {
   lcdClearLine(1);
   lcd.setCursor(0,1);
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  
-  displayTuningStep(step, 1);
+  displayTuningStep(gStep, 1);
   lcd.setCursor(0, 1);
   lcd.print("P3ST");
  
@@ -416,7 +414,7 @@ void bfoFreq() {
 //========================================
 void si5351CorrectionFactor() {
 
-  int correctionStep = steps[0];
+  int correctionStep = kSteps[0];
   int counter;
   float currentVFOnum = float(gLastUsedVFO);
   uint32_t correctionFactor = 0;
@@ -471,7 +469,7 @@ void si5351CorrectionFactor() {
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
   lcd.setCursor(13,0); lcd.print("USB");
   lcd.setCursor(0, 1); lcd.print(sp10); lcd.setCursor(0, 1); lcd.print("P3ST");
-  displayTuningStep(step, 1);
+  displayTuningStep(gStep, 1);
 
   return;
 }
