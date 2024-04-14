@@ -3,6 +3,12 @@
 // Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.
 // See https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
 // This version modified by Peter Marks VK3TPM
+/*
+  The frequencies we wish to use are 14Mhz+
+  The IF strip is at 4.915Mhz
+  The VFO outputs 14 - 4.915 = 9.085Mhz
+  The BFO outputs IF - a bit = 4.9175Mhz (to demod USB)
+*/
 
 #include "xiaoRP2040pinNums.h"  // Keep this library above the #defines.
 
@@ -13,7 +19,7 @@
 #define encoderA D0
 #define encoderB D1
 #define kLCDI2cAddress 0x27
-// Si5351 i2c address is 0x60
+#define kSi5351i2cAddress 0x60
 
 //========================================
 //=============  LIBRARIES ===============
@@ -82,7 +88,7 @@ void setup() {
   //////////////////////////////////////
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
-  displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
+  displayFreqLine(0, gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
   displayTuningStep(gStep, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
   lcd.setCursor(0, 1);
   lcd.print("P3ST.");
@@ -92,7 +98,6 @@ void setup() {
 //********* FUNCTION: (main)loop *********
 //========================================
 void loop() {
-
   unsigned char encoder;
   int counter = 0;
 
@@ -104,25 +109,20 @@ void loop() {
 // Button activity on tuning encoder          
    if (button.isLongClick()) {                           
     bfoFreq();                // Long press-and-release will call BFO-setting function.
-   }
-   else if(button.isDoubleClick()) {
-    si5351CorrectionFactor();
-   }
-   else if(button.isSingleClick() && gStep == kSteps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
-    gStep = kSteps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
-    displayTuningStep(gStep, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
-   }
-   else if (button.isSingleClick() && gStep == kSteps[0]) {
-    gStep = kSteps[1];
-    displayTuningStep(gStep, 1);
-    }
-   else if (button.isSingleClick() && gStep == kSteps[1]) {
-    gStep = kSteps[2];
-    displayTuningStep(gStep, 1);
-    }
-   else if (button.isSingleClick() && gStep == kSteps[2]) {
-    gStep = kSteps[3];
-    displayTuningStep(gStep, 1);
+   } else if(button.isDoubleClick()) {
+      si5351CorrectionFactor();
+   } else if(button.isSingleClick() && gStep == kSteps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
+      gStep = kSteps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
+      displayTuningStep(gStep, 1);               // A short click on 10KHz loops back to 10Hz. The default step is 1KHz.
+   } else if (button.isSingleClick() && gStep == kSteps[0]) {
+      gStep = kSteps[1];
+      displayTuningStep(gStep, 1);
+  } else if (button.isSingleClick() && gStep == kSteps[1]) {
+      gStep = kSteps[2];
+      displayTuningStep(gStep, 1);
+    } else if (button.isSingleClick() && gStep == kSteps[2]) {
+      gStep = kSteps[3];
+      displayTuningStep(gStep, 1);
    }
 
    uint32_t vfoValue = gLastUsedVFO;
@@ -131,26 +131,23 @@ void loop() {
   // so LCD and Si5351 aren't constantly updating (and generating RFI).
   if (!encoder && !button.isClick()) {
     goto skip;
-  }
-  else if (encoder == DIR_CCW) {
+  } else if (encoder == DIR_CCW) {
     counter++;
-  }
-  else if (encoder == DIR_CW) {
+  } else if (encoder == DIR_CW) {
     counter--;
   }
-    vfoValue += (counter * gStep);
-    Serial.print("set VFO freq CLK0: ");
-    Serial.println(vfoValue * 100);
-    si5351.set_freq(vfoValue * 100, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
-    gLastUsedVFO = vfoValue;
+  vfoValue += (counter * gStep);
+  Serial.print("set VFO freq CLK0: ");
+  Serial.println(vfoValue * SI5351_FREQ_MULT);
+  si5351.set_freq(vfoValue * SI5351_FREQ_MULT, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
+  gLastUsedVFO = vfoValue;
 
   // LCD display ///////////////////
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
   //displayTuningStep(gStep, 1);
  
-skip:   // This label is where the loop goes if there are no inputs.
-NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
-
+  skip:   // This label is where the loop goes if there are no inputs.
+  NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
 }  // closes main loop() 
 
 void setupInitialValues() {
@@ -176,21 +173,26 @@ void setupInitialValues() {
   }
   // Read stored values from EEPROM
   gCalibrationFactor = readUint32(kCalFactorAddress);
-  si5351.set_correction(((gCalibrationFactor - 10000) * 100), SI5351_PLL_INPUT_XO); 
+  si5351.set_correction(((gCalibrationFactor - 10000) * SI5351_FREQ_MULT), SI5351_PLL_INPUT_XO); 
   gLastUsedBFO = readUint32(kLastUsedBFOAddress);
+  /*
+  Frequencies are indicated in units of 0.01 Hz. 
+  Therefore, if you prefer to work in 1 Hz increments in your own code, 
+  simply multiply each frequency passed to the library by 100ULL 
+  (better yet, use the define called SI5351_FREQ_MULT in the header file for this multiplication).
+  */
   Serial.print("set BFO freq CLK2: ");
-  Serial.println(gLastUsedBFO * 100);
-  si5351.set_freq(gLastUsedBFO * 100, SI5351_CLK2);
+  Serial.println(gLastUsedBFO);
+  si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
 
   Serial.print("set VFO freq CLK0: ");
-  Serial.println(gLastUsedVFO * 100);
-  si5351.set_freq(gLastUsedVFO * 100, SI5351_CLK0);
+  Serial.println(gLastUsedVFO);
+  si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
 }
 ////========================================
 ////***** FUNCTION: lcdClearLine ***********
 ////========================================
 void lcdClearLine(byte lineNum) {
-
     lcd.setCursor(0,lineNum);
     lcd.print("                ");
     lcd.setCursor(0,lineNum);
@@ -200,7 +202,6 @@ void lcdClearLine(byte lineNum) {
 ////***** FUNCTION: displayFreqLine ********  
 ////========================================
 void displayFreqLine(byte lineNum, uint32_t freqValue) {
- 
   String valueStr;
   String mhzOnly;
   String khzOnly;
@@ -228,8 +229,7 @@ void displayFreqLine(byte lineNum, uint32_t freqValue) {
 
   if(valueStr.length() == 8) {
     lcd.print(mhzOnly + "." + khzOnly + "." + hzOnly);  // For frequencies >=10,000KHz (no leading blank space).
-  }
-  else {
+  } else {
     lcd.print(mhzOnly + "." + khzOnly + "." + hzOnly);  // For frequencies <=9,999KHz (adds leading blank space).
   }
 } // End displayFreqLine()
@@ -238,7 +238,6 @@ void displayFreqLine(byte lineNum, uint32_t freqValue) {
 ////***** FUNCTION: displayTuningStep ******  
 ////========================================
 void displayTuningStep(int Step, byte lineNum) {
-                  
   switch (Step) {
     case 10:
       lcd.setCursor(11, lineNum);
@@ -276,14 +275,12 @@ void displayTuningStep(int Step, byte lineNum) {
       lcd.print("P3ST");
       break;  
   } // End of switch-case
-
 } //End displayTuningStep()
 
 ////========================================
 ////***** FUNCTION: setDisplayOffset() *****
 ////========================================
 void setDisplayOffset() {
-
   int encoder;
   int counter = 0;
   uint32_t offsetValue = readUint32(kDisplayOffsetAddress);
@@ -302,10 +299,10 @@ void setDisplayOffset() {
     encoder = tuningEncoder.process();
 
     if (encoder == DIR_CCW) {
-    counter++;
+      counter++;
     }
     else if (encoder == DIR_CW) {
-    counter--;
+      counter--;
     }
 
     button.update();
@@ -339,7 +336,6 @@ void setDisplayOffset() {
 ////******** FUNCTION: bfoFreq *********
 ////========================================
 void bfoFreq() { 
-
     button.update();
 
     int bfoStep = kSteps[0];
@@ -361,7 +357,7 @@ void bfoFreq() {
 
   if (button.isSingleClick()) {
       setDisplayOffset();
-    }
+  }
 
     // Read tuning encoder and set Si5351 accordingly
     /////////////////////////////////////////////////
@@ -377,19 +373,18 @@ void bfoFreq() {
     // so LCD and Si5351 aren't constantly updating (and generating RFI).
     if (counter == 0 && !button.isClick()) {
       goto skip;
-    }
-    else {
+    } else {
       bfoValue += (counter * bfoStep);
       gLastUsedBFO = bfoValue;
     }
     Serial.print("set BFO freq CLK2: ");
-    Serial.println(gLastUsedBFO * 100);
-   si5351.set_freq(gLastUsedBFO * 100, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
-   lcd.setCursor(7, 1);
-   displayFreqLine(1,bfoValue);  //Parameters: LCD line (0 or 1), frequency value.
+    Serial.println(gLastUsedBFO);
+    si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
+    lcd.setCursor(7, 1);
+    displayFreqLine(1,bfoValue);  //Parameters: LCD line (0 or 1), frequency value.
 
-  skip: 
-  NOP;
+    skip: 
+    NOP;
   } // End of while loop.
   
   // At this point (after long press-and-hold of encoder button),
@@ -460,7 +455,7 @@ void si5351CorrectionFactor() {
   correctionFactorFloat = correctionFactorRaw / currentVFOnum;
   correctionFactor = int(correctionFactorFloat * 10000000);   // Multiplies up toward parts-per-billion
 
-  si5351.set_correction(correctionFactor * 100, SI5351_PLL_INPUT_XO);   // x100 to parts-per-billion
+  si5351.set_correction(correctionFactor * SI5351_FREQ_MULT, SI5351_PLL_INPUT_XO);   // x100 to parts-per-billion
   gLastUsedVFO = currentVFOnum;
   saveUint32(kCalFactorAddress, correctionFactor + 10000);  // Pad correctionFactor with 10000 to prevent integer underflow
                                           // of negative values.
@@ -470,8 +465,6 @@ void si5351CorrectionFactor() {
   lcd.setCursor(13,0); lcd.print("USB");
   lcd.setCursor(0, 1); lcd.print(sp10); lcd.setCursor(0, 1); lcd.print("P3ST");
   displayTuningStep(gStep, 1);
-
-  return;
 }
 
 
@@ -479,7 +472,6 @@ void si5351CorrectionFactor() {
 ////******* FUNCTION: saveInt ********
 ////=====================================
 void saveInt(int address, int number) {
- 
   EEPROM.write(address, number >> 8);
   EEPROM.write(address + 1, number & 0xFF);
 }
@@ -488,7 +480,6 @@ void saveInt(int address, int number) {
 //////******* FUNCTION: readInt ********
 //////=====================================
 int readInt(int address) {
-
   byte byte1 = EEPROM.read(address);
   byte byte2 = EEPROM.read(address + 1);
   return (byte1 << 8) + byte2;
@@ -498,7 +489,6 @@ int readInt(int address) {
 ////******* FUNCTION: saveUint32 ********
 ////=====================================
 void saveUint32(int address, uint32_t number) {
-
   EEPROM.write(address, (number >> 24) & 0xFF);      // These lines encode the 32-bit variable into
   EEPROM.write(address + 1, (number >> 16) & 0xFF);  // 4 bytes (8-bits each) and writes them to
   EEPROM.write(address + 2, (number >> 8) & 0xFF);   // consecutive eeprom bytes starting with the
@@ -510,7 +500,6 @@ void saveUint32(int address, uint32_t number) {
 //// ***** FUNCTION: readUint32 *******
 ///===================================
 uint32_t readUint32(int address) {
-
   return ((uint32_t)EEPROM.read(address) << 24) +      // These lines decode 4 consecutive eeprom bytes (8-
          ((uint32_t)EEPROM.read(address + 1) << 16) +  // bits each) into a 32-bit variable (starting with the
          ((uint32_t)EEPROM.read(address + 2) << 8) +   // address byte) and returns to the calling statement.
@@ -523,7 +512,7 @@ void i2cScan() {
   byte error, address;
   int nDevices;
  
-  Serial.println("Scanning...");
+  Serial.println("Scanning I2C...");
  
   nDevices = 0;
   for(address = 1; address < 127; address++ )
@@ -539,8 +528,8 @@ void i2cScan() {
       Serial.print("I2C device found at address 0x");
       if (address<16)
         Serial.print("0");
-      Serial.print(address,HEX);
-      Serial.println("  !");
+      Serial.print(address, HEX);
+      Serial.println("");
  
       nDevices++;
     }
@@ -549,7 +538,7 @@ void i2cScan() {
       Serial.print("Unknown error at address 0x");
       if (address<16)
         Serial.print("0");
-      Serial.println(address,HEX);
+      Serial.println(address, HEX);
     }    
   }
   if (nDevices == 0)
