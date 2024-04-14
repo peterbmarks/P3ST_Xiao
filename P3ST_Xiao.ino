@@ -44,15 +44,15 @@ const int kInitedMagicAddress = 0;  // look for a magic number to determine if E
 const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
-const int kInitedMagicNumber = 1234; // magic number to look for to determine if initial values have been stored
-
+const int kInitedMagicNumber = 1235; // magic number to look for to determine if initial values have been stored
+const uint32_t kCalibrationOffset = 10000;  // used to avoid negative calibration factor storage
 //========================================
 //======== GLOBAL DECLARATIONS ===========
 //======================================== 
-uint32_t gCalibrationFactor = 160100;       //////*** DEFAULT VALUE. CHANGE FOR A DIFFERENT CALIBRATION FACTOR AS FOUND FROM
+int32_t gCalibrationFactor = 0;       //////*** DEFAULT VALUE. CHANGE FOR A DIFFERENT CALIBRATION FACTOR AS FOUND FROM
                                    //////*** THE ETHERKIT Si5351_calibration.ino SKETCH AS FOUND IN THE
                                    //////*** ARDUINO IDE: File/Examples/Etherkit Si5351. *OR* USE 
-                                   
+
 uint32_t gLastUsedVFO = 9085000;
 uint32_t gDisplayOffset = 4915000;    
 
@@ -138,7 +138,10 @@ void loop() {
   }
   vfoValue += (counter * gStep);
   Serial.print("set VFO freq CLK0: ");
-  Serial.println(vfoValue);
+  Serial.print(vfoValue);
+  Serial.print(" (");
+  Serial.print(vfoValue + gDisplayOffset);
+  Serial.println("MHz)");
   si5351.set_freq(vfoValue * SI5351_FREQ_MULT, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
   gLastUsedVFO = vfoValue;
 
@@ -157,8 +160,8 @@ void setupInitialValues() {
   if(initedMagicNumberValue != kInitedMagicNumber) {
     Serial.println("##### Initializing EEPROM stored values");
     Serial.print("Initializing gCalibrationFactor = ");
-    Serial.println(gCalibrationFactor + 10000);
-    saveUint32(kCalFactorAddress, gCalibrationFactor + 10000);  // 10000 padding added to prevent underflow for negative cal factors.
+    Serial.println(gCalibrationFactor);
+    saveUint32(kCalFactorAddress, gCalibrationFactor + kCalibrationOffset);  // 10000 padding added to prevent underflow for negative cal factors.
 
     Serial.print("Initializing gDisplayOffset = ");
     Serial.println(gDisplayOffset);
@@ -172,8 +175,8 @@ void setupInitialValues() {
     saveUint32(kInitedMagicAddress, kInitedMagicNumber);  // write magic number so we know we've inited
   }
   // Read stored values from EEPROM
-  gCalibrationFactor = readUint32(kCalFactorAddress);
-  si5351.set_correction(((gCalibrationFactor - 10000) * SI5351_FREQ_MULT), SI5351_PLL_INPUT_XO); 
+  gCalibrationFactor = readUint32(kCalFactorAddress) - kCalibrationOffset;
+  si5351.set_correction(((gCalibrationFactor) * SI5351_FREQ_MULT), SI5351_PLL_INPUT_XO); 
   gLastUsedBFO = readUint32(kLastUsedBFOAddress);
   /*
   Frequencies are indicated in units of 0.01 Hz. 
@@ -186,7 +189,10 @@ void setupInitialValues() {
   si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
 
   Serial.print("set VFO freq CLK0: ");
-  Serial.println(gLastUsedVFO);
+  Serial.print(gLastUsedVFO);
+  Serial.print(" (");
+  Serial.print(gLastUsedVFO + gDisplayOffset);
+  Serial.println("MHz)");
   si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
 }
 ////========================================
