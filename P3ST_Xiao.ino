@@ -138,7 +138,7 @@ void loop() {
   }
   vfoValue += (counter * gStep);
   Serial.print("set VFO freq CLK0: ");
-  Serial.println(vfoValue * SI5351_FREQ_MULT);
+  Serial.println(vfoValue);
   si5351.set_freq(vfoValue * SI5351_FREQ_MULT, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
   gLastUsedVFO = vfoValue;
 
