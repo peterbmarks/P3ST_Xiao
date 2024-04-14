@@ -1,10 +1,10 @@
 # P3ST Firmware
 
-This version is currently under development by Peter Marks, VK3TPM and is stored [here](https://github.com/peterbmarks/P3ST_Xiao). 
-
 The original is from Todd Carney and can be found [here](https://github.com/mostlydiyrf/p3st).
 
 The kit is available from [Mostly DIY RF](https://mostlydiyrf.com/p3st/).
+
+This version is currently under development by Peter Marks, VK3TPM and is stored [here](https://github.com/peterbmarks/P3ST_Xiao). 
 
 Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/messages).
 
@@ -17,10 +17,11 @@ Discussion about the project is on [groups.io](https://groups.io/g/pssst-20/mess
 
 ## Notes
 
+* Arduino IDE 2 is needed I think. I'm currently on 2.3.2
 * Set board to Raspberry Pi Pico -> Seeed XIAO RP2040
-* Plug the board in to USB while holding the boot button
+* Plug the board in to USB while holding the boot button the first time.
 * Choose "UF2 Port" for the serial port
-* I've added a built binary. If you plug the board in with the boot button down it will mount as a disk drive. Drag the .uf2 file to it to program.
+* I've added a built binary. It's in the Binary folder. If you plug the board in with the boot button down it will mount as a disk drive. Drag the .uf2 file to it to program.
 
 ## Serial debug message example
 
