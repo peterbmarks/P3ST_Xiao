@@ -44,7 +44,8 @@ const int kInitedMagicAddress = 0;  // look for a magic number to determine if E
 const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
-const int kInitedMagicNumber = 1235; // magic number to look for to determine if initial values have been stored
+const int kLastUsedVFOAddress = 20;
+const int kInitedMagicNumber = 1236; // magic number to look for to determine if initial values have been stored
 const uint32_t kCalibrationOffset = 10000;  // used to avoid negative calibration factor storage
 //========================================
 //======== GLOBAL DECLARATIONS ===========
@@ -53,7 +54,7 @@ int32_t gCalibrationFactor = 0;       //////*** DEFAULT VALUE. CHANGE FOR A DIFF
                                    //////*** THE ETHERKIT Si5351_calibration.ino SKETCH AS FOUND IN THE
                                    //////*** ARDUINO IDE: File/Examples/Etherkit Si5351. *OR* USE 
 
-uint32_t gLastUsedVFO = 9085000;
+uint32_t gLastUsedVFO = 9185000;  // Default to 14.1Mhz for convenience
 uint32_t gDisplayOffset = 4915000;    
 
 uint32_t gLastUsedBFO = 4917500;    // Starting value. Later read from "EEPROM"
@@ -110,6 +111,7 @@ void loop() {
    if (button.isLongClick()) {                           
     bfoFreq();                // Long press-and-release will call BFO-setting function.
    } else if(button.isDoubleClick()) {
+      saveVFO();  // don't do this too many times
       si5351CorrectionFactor();
    } else if(button.isSingleClick() && gStep == kSteps[3]) {    // These else-if statements respond to single (short click) button pushes to step-through   
       gStep = kSteps[0];                          // the tuning increments (10Hz, 100Hz, 1KHz, 10KHz) for each detent of the tuning encoder.
@@ -171,6 +173,10 @@ void setupInitialValues() {
     Serial.println(gLastUsedBFO);
     saveUint32(kLastUsedBFOAddress, gLastUsedBFO);    // Saves default value in eeprom.
 
+    Serial.print("Initializing gLastUsedVFO = ");
+    Serial.println(gLastUsedVFO);
+    saveUint32(kLastUsedVFOAddress, gLastUsedVFO);    // Saves default value in eeprom.
+
     Serial.println("Writing magic number..");
     saveUint32(kInitedMagicAddress, kInitedMagicNumber);  // write magic number so we know we've inited
   }
@@ -188,6 +194,7 @@ void setupInitialValues() {
   Serial.println(gLastUsedBFO);
   si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
 
+  gLastUsedVFO = readUint32(kLastUsedVFOAddress);
   Serial.print("set VFO freq CLK0: ");
   Serial.print(gLastUsedVFO);
   Serial.print(" (");
@@ -240,6 +247,10 @@ void displayFreqLine(byte lineNum, uint32_t freqValue) {
   }
 } // End displayFreqLine()
 
+void saveVFO() {
+  saveUint32(kLastUsedVFOAddress, gLastUsedVFO); 
+  Serial.println("Saved VFO to EEPROM");
+}
 ////========================================
 ////***** FUNCTION: displayTuningStep ******  
 ////========================================
