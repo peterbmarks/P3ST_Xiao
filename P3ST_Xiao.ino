@@ -55,9 +55,9 @@ int32_t gCalibrationFactor = 0;       //////*** DEFAULT VALUE. CHANGE FOR A DIFF
                                    //////*** ARDUINO IDE: File/Examples/Etherkit Si5351. *OR* USE 
 
 uint32_t gLastUsedVFO = 9185000;  // Default to 14.1Mhz for convenience
-uint32_t gDisplayOffset = 4915000;    
+uint32_t gDisplayOffset = 4913000;    
 
-uint32_t gLastUsedBFO = 4917500;    // Starting value. Later read from "EEPROM"
+uint32_t gLastUsedBFO = 4915000;    // Starting value. Later read from "EEPROM"
 int kSteps[] = {10,100,1000,10000}; // Tuning kSteps to increment frequency (in Hz) each encoder detent.
 int gStep = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGULAR *SIGNED* INTEGER!
 
