@@ -18,7 +18,10 @@
 #define encoderButton D2
 #define encoderA D0
 #define encoderB D1
-#define kLCDI2cAddress 0x27
+#define kLCDI2cAddress 0x27 // as supplied
+//#define kLCDI2cAddress 0x3e // Waveshare LCD1602
+//#define kLCDI2cAddress 0x3f // EONE LCD
+
 #define kSi5351i2cAddress 0x60
 
 //========================================
