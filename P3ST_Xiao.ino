@@ -81,8 +81,8 @@ void setup() {
   lcd.init();
   lcd.backlight();
   Wire.begin();
-  attachInterrupt(0, rotate, CHANGE);
-  attachInterrupt(1, rotate, CHANGE);
+  //attachInterrupt(0, rotate, CHANGE);
+  //attachInterrupt(1, rotate, CHANGE);
 
   //tuningEncoder.begin();
 
