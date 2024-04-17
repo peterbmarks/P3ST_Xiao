@@ -81,6 +81,10 @@ void setup() {
   lcd.init();
   lcd.backlight();
   Wire.begin();
+  attachInterrupt(0, rotate, CHANGE);
+  attachInterrupt(1, rotate, CHANGE);
+
+  //tuningEncoder.begin();
 
   Serial.println("P3ST starting up...");
   i2cScan();
@@ -204,6 +208,20 @@ void setupInitialValues() {
   Serial.print(gLastUsedVFO + gDisplayOffset);
   Serial.println("MHz)");
   si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
+}
+
+int counter = 0;
+
+// experimental interrupt handler
+void rotate() {
+  unsigned char result = tuningEncoder.process();
+  if (result == DIR_CW) {
+    counter++;
+    Serial.println(counter);
+  } else if (result == DIR_CCW) {
+    counter--;
+    Serial.println(counter);
+  }
 }
 ////========================================
 ////***** FUNCTION: lcdClearLine ***********
