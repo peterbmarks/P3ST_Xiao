@@ -48,7 +48,7 @@ const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
 const int kLastUsedVFOAddress = 20;
-const int kInitedMagicNumber = 1236; // magic number to look for to determine if initial values have been stored
+const int kInitedMagicNumber = 1237; // magic number to look for to determine if initial values have been stored
 const uint32_t kCalibrationOffset = 10000;  // used to avoid negative calibration factor storage
 //========================================
 //======== GLOBAL DECLARATIONS ===========
