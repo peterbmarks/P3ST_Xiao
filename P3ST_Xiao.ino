@@ -97,9 +97,10 @@ void setup() {
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
   displayFreqLine(0, gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
-  displayTuningStep(gStep, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
   lcd.setCursor(0, 1);
   lcd.print("P3ST.");
+  displayTuningStep(gStep, 1);      //Parameters: displayTuningStep(int Step, byte lineNum)
+
 } // End of setup()
 
 //========================================
@@ -156,7 +157,7 @@ void loop() {
 
   // LCD display ///////////////////
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);
-  //displayTuningStep(gStep, 1);
+  displayTuningStep(gStep, 1);
  
   skip:   // This label is where the loop goes if there are no inputs.
   NOP;    // C/C++ rules say a label must be followed by something. This "something" does nothing.
@@ -272,11 +273,32 @@ void saveVFO() {
   saveUint32(kLastUsedVFOAddress, gLastUsedVFO); 
   Serial.println("Saved VFO to EEPROM");
 }
+
+void setCursorForTuningStep(int step) {
+  switch(step) {
+    case 10:
+      lcd.setCursor(8, 0);
+      break;
+    case 100:
+      lcd.setCursor(7,0);
+      break;
+    case 1000:
+      lcd.setCursor(5, 0);
+      break;
+    case 10000:
+      lcd.setCursor(4, 0);
+      break;
+    case 100000:
+      lcd.setCursor(3, 0);
+      break;
+  }
+  lcd.cursor_on();
+}
 ////========================================
 ////***** FUNCTION: displayTuningStep ******  
 ////========================================
-void displayTuningStep(int Step, byte lineNum) {
-  switch (Step) {
+void displayTuningStep(int step, byte lineNum) {
+  switch (step) {
     case 10:
       lcd.setCursor(11, lineNum);
       lcd.print("     ");
@@ -313,6 +335,7 @@ void displayTuningStep(int Step, byte lineNum) {
       lcd.print("P3ST");
       break;  
   } // End of switch-case
+  setCursorForTuningStep(step);
 } //End displayTuningStep()
 
 ////========================================
@@ -441,10 +464,10 @@ void bfoFreq() {
   lcdClearLine(1);
   lcd.setCursor(0,1);
   displayFreqLine(0,gLastUsedVFO + gDisplayOffset);  
-  displayTuningStep(gStep, 1);
-  lcd.setCursor(0, 1);
+   lcd.setCursor(0, 1);
   lcd.print("P3ST");
- 
+  displayTuningStep(gStep, 1);
+
   return;
 } // End of bfoFreq() 
 
