@@ -414,12 +414,18 @@ void bfoFreq() {
     } else {
       bfoValue += (counter * bfoStep);
       gLastUsedBFO = bfoValue;
+
+      // move the VFO the opposite direction to the BFO change
+      gLastUsedVFO -= (counter * bfoStep);
+      si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
+      Serial.print("Set VFO to: ");
+      Serial.println(gLastUsedVFO);
     }
     Serial.print("set BFO freq CLK2: ");
     Serial.println(gLastUsedBFO);
     si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
     lcd.setCursor(7, 1);
-    displayFreqLine(1,bfoValue);  //Parameters: LCD line (0 or 1), frequency value.
+    displayFreqLine(1,gLastUsedBFO);  //Parameters: LCD line (0 or 1), frequency value.
 
     skip: 
     NOP;
