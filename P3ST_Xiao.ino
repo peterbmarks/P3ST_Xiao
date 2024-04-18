@@ -90,6 +90,8 @@ void setup() {
   i2cScan();
 
   EEPROM.begin(256);
+  delay(500); // give a bit of time before talking to the si5351
+
   si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
