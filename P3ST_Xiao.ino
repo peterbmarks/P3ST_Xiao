@@ -24,7 +24,7 @@
 
 #define kSi5351i2cAddress 0x60
 
-// #define SERIAL_DEBUG  // uncomment this to send serial info
+//#define SERIAL_DEBUG  // uncomment this to send serial info
 
 //========================================
 //=============  LIBRARIES ===============
@@ -50,7 +50,7 @@ const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
 const int kLastUsedVFOAddress = 20;
-const int kInitedMagicNumber = 1237; // magic number to look for to determine if initial values have been stored
+const int kInitedMagicNumber = 1239; // magic number to look for to determine if initial values have been stored
 const uint32_t kCalibrationOffset = 10000;  // used to avoid negative calibration factor storage
 //========================================
 //======== GLOBAL DECLARATIONS ===========
@@ -59,10 +59,10 @@ int32_t gCalibrationFactor = 0;       //////*** DEFAULT VALUE. CHANGE FOR A DIFF
                                    //////*** THE ETHERKIT Si5351_calibration.ino SKETCH AS FOUND IN THE
                                    //////*** ARDUINO IDE: File/Examples/Etherkit Si5351. *OR* USE 
 
-uint32_t gLastUsedVFO = 9185000;  // Default to 14.1Mhz for convenience
+uint32_t gLastUsedVFO = 9187000;  // Default to 14.1Mhz for convenience
 uint32_t gDisplayOffset = 4913000;    
 
-uint32_t gLastUsedBFO = 4915000;    // Starting value. Later read from "EEPROM"
+uint32_t gLastUsedBFO = 4912380;    // Starting value. Later read from "EEPROM"
 int kSteps[] = {10,100,1000,10000}; // Tuning kSteps to increment frequency (in Hz) each encoder detent.
 int gStep = 1000;                   // Step on startup. THIS *MUST* REMAIN A REGULAR *SIGNED* INTEGER!
 
@@ -213,6 +213,10 @@ void setupInitialValues() {
   }
   // Read stored values from EEPROM
   gCalibrationFactor = readUint32(kCalFactorAddress) - kCalibrationOffset;
+  #ifdef SERIAL_DEBUG
+  Serial.print("Read calibration factor = ");
+  Serial.println(gCalibrationFactor);
+  #endif
   si5351.set_correction(((gCalibrationFactor) * SI5351_FREQ_MULT), SI5351_PLL_INPUT_XO); 
   gLastUsedBFO = readUint32(kLastUsedBFOAddress);
   /*
