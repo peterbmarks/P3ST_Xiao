@@ -24,6 +24,8 @@
 
 #define kSi5351i2cAddress 0x60
 
+// #define SERIAL_DEBUG  // uncomment this to send serial info
+
 //========================================
 //=============  LIBRARIES ===============
 //========================================
@@ -76,7 +78,9 @@ PinButton button(encoderButton);
 ////******** FUNCTION: setup ***************
 ////========================================
 void setup() {
+  #ifdef SERIAL_DEBUG
   Serial.begin(115200);
+  #endif
 
   lcd.init();
   lcd.backlight();
@@ -85,9 +89,10 @@ void setup() {
   //attachInterrupt(1, rotate, CHANGE);
 
   //tuningEncoder.begin();
-
+  #ifdef SERIAL_DEBUG
   Serial.println("P3ST starting up...");
   i2cScan();
+  #endif
 
   EEPROM.begin(256);
   delay(500); // give a bit of time before talking to the si5351
@@ -149,11 +154,14 @@ void loop() {
     counter--;
   }
   vfoValue += (counter * gStep);
+  #ifdef SERIAL_DEBUG
   Serial.print("set VFO freq CLK0: ");
   Serial.print(vfoValue);
   Serial.print(" (");
   Serial.print(vfoValue + gDisplayOffset);
   Serial.println("MHz)");
+  #endif
+
   si5351.set_freq(vfoValue * SI5351_FREQ_MULT, SI5351_CLK0);  // Si5351 is set in 0.01 Hz increments. "vfoValue" is in integer Hz.
   gLastUsedVFO = vfoValue;
 
@@ -167,27 +175,38 @@ void loop() {
 
 void setupInitialValues() {
   uint32_t initedMagicNumberValue = readUint32(kInitedMagicAddress);
+  #ifdef SERIAL_DEBUG
   Serial.print("Read magic number = ");
   Serial.println(initedMagicNumberValue);
+  #endif
+
   if(initedMagicNumberValue != kInitedMagicNumber) {
+    #ifdef SERIAL_DEBUG
     Serial.println("##### Initializing EEPROM stored values");
     Serial.print("Initializing gCalibrationFactor = ");
     Serial.println(gCalibrationFactor);
-    saveUint32(kCalFactorAddress, gCalibrationFactor + kCalibrationOffset);  // 10000 padding added to prevent underflow for negative cal factors.
+    #endif
 
+    saveUint32(kCalFactorAddress, gCalibrationFactor + kCalibrationOffset);  // 10000 padding added to prevent underflow for negative cal factors.
+    #ifdef SERIAL_DEBUG
     Serial.print("Initializing gDisplayOffset = ");
     Serial.println(gDisplayOffset);
+    #endif
     saveUint32(kDisplayOffsetAddress, gDisplayOffset);       // Saves default value in eeprom.
 
     Serial.print("Initializing gLastUsedBFO = ");
     Serial.println(gLastUsedBFO);
     saveUint32(kLastUsedBFOAddress, gLastUsedBFO);    // Saves default value in eeprom.
-
+    #ifdef SERIAL_DEBUG
     Serial.print("Initializing gLastUsedVFO = ");
     Serial.println(gLastUsedVFO);
+    #endif
     saveUint32(kLastUsedVFOAddress, gLastUsedVFO);    // Saves default value in eeprom.
 
+    #ifdef SERIAL_DEBUG
     Serial.println("Writing magic number..");
+    #endif
+
     saveUint32(kInitedMagicAddress, kInitedMagicNumber);  // write magic number so we know we've inited
   }
   // Read stored values from EEPROM
@@ -200,16 +219,20 @@ void setupInitialValues() {
   simply multiply each frequency passed to the library by 100ULL 
   (better yet, use the define called SI5351_FREQ_MULT in the header file for this multiplication).
   */
+  #ifdef SERIAL_DEBUG
   Serial.print("set BFO freq CLK2: ");
   Serial.println(gLastUsedBFO);
+  #endif
   si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
 
   gLastUsedVFO = readUint32(kLastUsedVFOAddress);
+  #ifdef SERIAL_DEBUG
   Serial.print("set VFO freq CLK0: ");
   Serial.print(gLastUsedVFO);
   Serial.print(" (");
   Serial.print(gLastUsedVFO + gDisplayOffset);
   Serial.println("MHz)");
+  #endif
   si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
 }
 
@@ -220,10 +243,14 @@ void rotate() {
   unsigned char result = tuningEncoder.process();
   if (result == DIR_CW) {
     counter++;
+    #ifdef SERIAL_DEBUG
     Serial.println(counter);
+    #endif
   } else if (result == DIR_CCW) {
     counter--;
+    #ifdef SERIAL_DEBUG
     Serial.println(counter);
+    #endif
   }
 }
 ////========================================
@@ -273,7 +300,9 @@ void displayFreqLine(byte lineNum, uint32_t freqValue) {
 
 void saveVFO() {
   saveUint32(kLastUsedVFOAddress, gLastUsedVFO); 
+  #ifdef SERIAL_DEBUG
   Serial.println("Saved VFO to EEPROM");
+  #endif
 }
 
 void setCursorForTuningStep(int step) {
@@ -443,11 +472,15 @@ void bfoFreq() {
       // move the VFO the opposite direction to the BFO change
       gLastUsedVFO -= (counter * bfoStep);
       si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
+      #ifdef SERIAL_DEBUG
       Serial.print("Set VFO to: ");
       Serial.println(gLastUsedVFO);
+      #endif
     }
+    #ifdef SERIAL_DEBUG
     Serial.print("set BFO freq CLK2: ");
     Serial.println(gLastUsedBFO);
+    #endif
     si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2); //BFO frequency set within the loop for real-time adjustment.
     lcd.setCursor(7, 1);
     displayFreqLine(1,gLastUsedBFO);  //Parameters: LCD line (0 or 1), frequency value.
@@ -575,7 +608,7 @@ uint32_t readUint32(int address) {
          (uint32_t)EEPROM.read(address + 3);           // Example: uint32_t myNumber = readUint32(0);
 }
 
-// Scan the i2c bus
+// Scan the i2c bus (only if SERIAL_DEBUG is defined)
 // From: https://playground.arduino.cc/Main/I2cScanner/
 void i2cScan() {
   byte error, address;
