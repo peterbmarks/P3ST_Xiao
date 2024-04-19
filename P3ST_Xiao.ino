@@ -78,17 +78,15 @@ PinButton button(encoderButton);
 ////******** FUNCTION: setup ***************
 ////========================================
 void setup() {
+  bool si5351_found = false;
   #ifdef SERIAL_DEBUG
   Serial.begin(115200);
   #endif
 
+  Wire.begin();
   lcd.init();
   lcd.backlight();
-  Wire.begin();
-  //attachInterrupt(0, rotate, CHANGE);
-  //attachInterrupt(1, rotate, CHANGE);
 
-  //tuningEncoder.begin();
   #ifdef SERIAL_DEBUG
   Serial.println("P3ST starting up...");
   i2cScan();
@@ -97,9 +95,13 @@ void setup() {
   EEPROM.begin(256);
   delay(500); // give a bit of time before talking to the si5351
 
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
-  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
+  si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
+  if(!si5351_found)
+  {
+    #ifdef SERIAL_DEBUG
+    Serial.println("Device not found on I2C bus!");
+    #endif
+  }
   //////////////////////////////////////
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
 
@@ -234,6 +236,9 @@ void setupInitialValues() {
   Serial.println("MHz)");
   #endif
   si5351.set_freq(gLastUsedVFO * SI5351_FREQ_MULT, SI5351_CLK0);
+
+  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
+  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
 }
 
 int counter = 0;
