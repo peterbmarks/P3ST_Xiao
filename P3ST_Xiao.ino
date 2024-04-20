@@ -84,6 +84,19 @@ void setup() {
   #endif
 
   Wire.begin();
+  /*
+  Todd wrote: 
+  I don't know what the default is, but I think it's 400KHz. 
+  The Philhower board package for the RP2040 (and its implementation of Wire) 
+  may have the default set too high. I think it can be set as low as 10KHz. 
+  I had to monkey with it once when dealing with a PCF8574 bus expander. 
+  I think I had to take it down to 100KHz. By the way, the problem I was 
+  having with the bus expander was also intermittent. Sometimes it worked, sometimes not. 
+  Reducing the frequency of the I2C clock made it reliable.
+
+  */
+  Wire.setClock(100000);  // trying to avoid intermittent startup failure with si5351
+
   lcd.init();
   lcd.backlight();
 
