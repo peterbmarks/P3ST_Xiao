@@ -97,9 +97,6 @@ void setup() {
   */
   Wire.setClock(100000);  // trying to avoid intermittent startup failure with si5351
 
-  lcd.init();
-  lcd.backlight();
-
   #ifdef SERIAL_DEBUG
   Serial.println("P3ST starting up...");
   i2cScan();
@@ -117,6 +114,9 @@ void setup() {
   }
   //////////////////////////////////////
   setupInitialValues(); // read from EEPROM or set initial values if not already stored
+
+  lcd.init();
+  lcd.backlight();
 
   displayFreqLine(0, gLastUsedVFO + gDisplayOffset);  //Parameters: LCD line (0 or 1), frequency value.
   lcd.setCursor(0, 1);
@@ -189,6 +189,11 @@ void loop() {
 }  // closes main loop() 
 
 void setupInitialValues() {
+  delay(500);
+   // Query a status update and wait a bit to let the Si5351 populate the
+  // status flags correctly.
+  si5351.update_status();
+
   uint32_t initedMagicNumberValue = readUint32(kInitedMagicAddress);
   #ifdef SERIAL_DEBUG
   Serial.print("Read magic number = ");
@@ -242,7 +247,11 @@ void setupInitialValues() {
   Serial.print("set BFO freq CLK2: ");
   Serial.println(gLastUsedBFO);
   #endif
-  si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
+  uint8_t siResult = si5351.set_freq(gLastUsedBFO * SI5351_FREQ_MULT, SI5351_CLK2);
+  #ifdef SERIAL_DEBUG
+  Serial.print("set BFO result = ");
+  Serial.println(siResult);
+  #endif
 
   gLastUsedVFO = readUint32(kLastUsedVFOAddress);
   #ifdef SERIAL_DEBUG
@@ -256,8 +265,27 @@ void setupInitialValues() {
 
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
+
+  printSi5351Status();
 }
 
+void printSi5351Status() {
+  #ifdef SERIAL_DEBUG
+  // Read the Status Register and print it
+  si5351.update_status();
+  delay(200);
+  Serial.print("SYS_INIT: ");
+  Serial.print(si5351.dev_status.SYS_INIT);
+  Serial.print("  LOL_A: ");
+  Serial.print(si5351.dev_status.LOL_A);
+  Serial.print("  LOL_B: ");
+  Serial.print(si5351.dev_status.LOL_B);
+  Serial.print("  LOS: ");
+  Serial.print(si5351.dev_status.LOS);
+  Serial.print("  REVID: ");
+  Serial.println(si5351.dev_status.REVID);
+  #endif
+}
 int counter = 0;
 
 // experimental interrupt handler
