@@ -50,7 +50,7 @@ const int kCalFactorAddress = 5;
 const int kDisplayOffsetAddress = 10;
 const int kLastUsedBFOAddress = 15;
 const int kLastUsedVFOAddress = 20;
-const int kInitedMagicNumber = 1239; // magic number to look for to determine if initial values have been stored
+const int kInitedMagicNumber = 1234; // magic number to look for to determine if initial values have been stored
 const uint32_t kCalibrationOffset = 10000;  // used to avoid negative calibration factor storage
 //========================================
 //======== GLOBAL DECLARATIONS ===========
@@ -79,6 +79,8 @@ PinButton button(encoderButton);
 ////========================================
 void setup() {
   bool si5351_found = false;
+   delay(500); // give a bit of time before talking to the si5351
+
   #ifdef SERIAL_DEBUG
   Serial.begin(115200);
   #endif
@@ -103,8 +105,7 @@ void setup() {
   #endif
 
   EEPROM.begin(256);
-  delay(500); // give a bit of time before talking to the si5351
-
+ 
   si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
   if(!si5351_found)
   {
@@ -189,7 +190,6 @@ void loop() {
 }  // closes main loop() 
 
 void setupInitialValues() {
-  delay(500);
    // Query a status update and wait a bit to let the Si5351 populate the
   // status flags correctly.
   si5351.update_status();
